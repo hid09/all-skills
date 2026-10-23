@@ -1,0 +1,11 @@
+{
+  "name": "wardrobe-local",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node app/server.js"
+  }
+}

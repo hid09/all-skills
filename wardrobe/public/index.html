@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>衣橱档案 · 秋冬</title>
+  <link rel="stylesheet" href="/styles.css?v=20261017-17" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">衣</span><div><div class="eyebrow">WINTER EDIT</div><div class="brand-line"><h1>衣橱档案</h1><span class="tagline">把每一件衣物，留在手边。</span></div></div></div>
+    </header>
+    <main>
+      <section class="toolbar"><div class="filters" id="filters"></div><div class="count" id="count"></div><div class="toolbar-actions"><button class="ghost icon-button" id="exportBtn" aria-label="导出清单" title="导出清单"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg></button><button class="primary compact-action" id="uploadBtn">＋ 添加</button></div></section>
+      <div class="status-line"><span class="dot"></span><span id="statusText">本地数据已准备好</span></div>
+      <section class="grid" id="grid"></section>
+      <section class="empty" id="empty" hidden><div class="empty-icon">◌</div><h3>衣橱还是空的</h3><p>先上传几件秋冬衣物，照片可以一次选多张。</p><button class="primary" id="emptyUpload">添加第一件衣物</button></section>
+    </main>
+  </div>
+  <div class="modal-backdrop" id="modalBackdrop" hidden><div class="modal" role="dialog" aria-modal="true"><button class="modal-close" id="closeModal">×</button><div id="modalContent"></div></div></div>
+  <template id="itemTemplate"><article class="card"><div class="card-image"><img /><div class="photo-count"></div><button class="card-menu" aria-label="编辑">···</button></div><div class="card-body"><div class="card-meta"></div><h3></h3><p class="card-note"></p></div></article></template>
+  <script src="/app.js?v=20261017-17"></script>
+</body>
+</html>

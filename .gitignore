@@ -1,0 +1,8 @@
+wardrobe/data/*
+!wardrobe/data/.gitkeep
+context/*
+!context/.gitkeep
+dist/
+*.zip
+*.log
+node_modules/

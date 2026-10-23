@@ -1,0 +1,38 @@
+{
+    "results":  [
+                    {
+                        "id":  "ping-gpt",
+                        "status":  "failed",
+                        "content":  null,
+                        "raw_content":  "",
+                        "tokens_used":  {
+
+                                        },
+                        "latency_ms":  2463,
+                        "error":  "HTTP 503 call failed",
+                        "retry_count":  0,
+                        "provider":  "tokenopen",
+                        "response_format_downgraded":  false
+                    },
+                    {
+                        "id":  "ping-deepseek",
+                        "status":  "failed",
+                        "content":  null,
+                        "raw_content":  "",
+                        "tokens_used":  {
+
+                                        },
+                        "latency_ms":  1058,
+                        "error":  "HTTP 400 call failed",
+                        "retry_count":  0,
+                        "provider":  "deepseek",
+                        "response_format_downgraded":  false
+                    }
+                ],
+    "meta":  {
+                 "started_at":  "2026-07-06T11:20:11.3606556+08:00",
+                 "finished_at":  "2026-07-06T11:20:16.0237596+08:00",
+                 "total_duration_ms":  4663,
+                 "concurrency_mode":  "sequential-ps51-fallback"
+             }
+}

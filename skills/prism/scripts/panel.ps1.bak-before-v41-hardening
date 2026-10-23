@@ -1,0 +1,318 @@
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $true)][string]$RequestFile,
+    [Parameter(Mandatory = $true)][string]$OutputFile
+)
+
+$ErrorActionPreference = 'Stop'
+$ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$SkillRoot = Split-Path -Parent $ScriptRoot
+
+function Write-Utf8NoBomFile {
+    param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][string]$Content)
+    $dir = Split-Path -Parent $Path
+    if ($dir -and -not (Test-Path -LiteralPath $dir)) {
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    }
+    $encoding = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $encoding)
+}
+
+function ConvertTo-JsonCompat {
+    param([Parameter(Mandatory = $true)]$Value, [int]$Depth = 80)
+    return ($Value | ConvertTo-Json -Depth $Depth)
+}
+
+function Read-JsonFile {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "RequestFile not found: $Path"
+    }
+    try {
+        $raw = [System.IO.File]::ReadAllText((Resolve-Path -LiteralPath $Path), [System.Text.Encoding]::UTF8)
+        if ([string]::IsNullOrWhiteSpace($raw)) { throw 'JSON content is empty' }
+        return ($raw | ConvertFrom-Json)
+    }
+    catch {
+        throw "RequestFile is not valid JSON: $($_.Exception.Message)"
+    }
+}
+
+function Test-PanelRequest {
+    param([Parameter(Mandatory = $true)]$InputObject)
+    if ($null -eq $InputObject.requests) { throw 'in.json missing required field: requests' }
+    if ($null -eq $InputObject.timeout_seconds) { throw 'in.json missing required field: timeout_seconds' }
+    if ($null -eq $InputObject.parallel) { throw 'in.json missing required field: parallel' }
+    $requests = @($InputObject.requests)
+    if ($requests.Count -lt 1 -or $requests.Count -gt 4) { throw 'requests count must be between 1 and 4' }
+    if ([int]$InputObject.timeout_seconds -lt 10 -or [int]$InputObject.timeout_seconds -gt 300) { throw 'timeout_seconds must be between 10 and 300' }
+    foreach ($request in $requests) {
+        foreach ($field in @('id', 'model', 'system_prompt', 'user_prompt')) {
+            if ([string]::IsNullOrWhiteSpace([string]$request.$field)) { throw "request missing required field: $field" }
+        }
+        if ($request.response_format -and @('text', 'json_object', 'json_schema') -notcontains [string]$request.response_format) {
+            throw "request $($request.id) has invalid response_format"
+        }
+        if ($request.max_tokens -and [int]$request.max_tokens -lt 1000) { throw "request $($request.id) max_tokens must be at least 1000" }
+        if ($request.temperature -and ([double]$request.temperature -lt 0 -or [double]$request.temperature -gt 2)) { throw "request $($request.id) temperature must be between 0 and 2" }
+    }
+}
+
+$Worker = {
+    param($Request, [int]$TimeoutSec, [string]$ScriptRoot)
+
+    $ErrorActionPreference = 'Stop'
+
+    function Read-KeyFile {
+        param([string]$Path)
+        $map = @{}
+        if (-not (Test-Path -LiteralPath $Path)) { return $map }
+        $lines = [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)
+        foreach ($line in $lines) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#')) { continue }
+            $idx = $trimmed.IndexOf('=')
+            if ($idx -le 0) { continue }
+            $name = $trimmed.Substring(0, $idx).Trim()
+            $value = $trimmed.Substring($idx + 1).Trim().Trim('"').Trim("'")
+            if ($name) { $map[$name] = $value }
+        }
+        return $map
+    }
+
+    function Get-EnvValue {
+        param([string]$Name)
+        return [Environment]::GetEnvironmentVariable($Name, 'Process')
+    }
+
+    function Get-ModelProvider {
+        param([string]$Model, [string]$SkillRoot)
+        $modelsPath = Join-Path (Join-Path $SkillRoot 'config') 'models.json'
+        if (Test-Path -LiteralPath $modelsPath) {
+            try {
+                $cfg = [System.IO.File]::ReadAllText($modelsPath, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+                if ($cfg.models.PSObject.Properties.Name -contains $Model) {
+                    return [string]$cfg.models.$Model.provider
+                }
+            } catch { }
+        }
+        if ($Model -match '(?i)deepseek') { return 'deepseek' }
+        return 'tokenopen'
+    }
+
+    function Get-ProviderConfig {
+        param([string]$Model, [string]$ScriptRoot)
+        $skillRoot = Split-Path -Parent $ScriptRoot
+        $provider = Get-ModelProvider -Model $Model -SkillRoot $skillRoot
+        switch ($provider) {
+            'deepseek' {
+                $keyName = 'PRISM_DEEPSEEK_KEY'; $baseName = 'PRISM_DEEPSEEK_BASE'; $defaultBase = 'https://api.deepseek.com'
+            }
+            default {
+                $provider = 'tokenopen'; $keyName = 'PRISM_TOKENOPEN_KEY'; $baseName = 'PRISM_TOKENOPEN_BASE'; $defaultBase = 'https://www.tokenopen.ai'
+            }
+        }
+
+        $userFile = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.prism\keys.env'
+        $localFile = Join-Path $ScriptRoot 'keys.env'
+        $userMap = Read-KeyFile $userFile
+        $localMap = Read-KeyFile $localFile
+
+        $key = Get-EnvValue $keyName
+        if (-not $key -and $userMap.ContainsKey($keyName)) { $key = $userMap[$keyName] }
+        if (-not $key -and $localMap.ContainsKey($keyName)) { $key = $localMap[$keyName] }
+
+        $base = Get-EnvValue $baseName
+        if (-not $base -and $userMap.ContainsKey($baseName)) { $base = $userMap[$baseName] }
+        if (-not $base -and $localMap.ContainsKey($baseName)) { $base = $localMap[$baseName] }
+        if (-not $base) { $base = $defaultBase }
+
+        if (-not $key) {
+            throw "Missing $keyName; see INSTALL.md"
+        }
+        if ($key -match '^(sk-your-|your-|fake($|-)|dummy($|-)|placeholder($|-)|sk-test($|-))') {
+            throw 'API authentication failed or key is invalid (placeholder/test key detected; request not sent)'
+        }
+
+        return [pscustomobject]@{ Provider = $provider; Base = $base.TrimEnd('/'); Key = $key }
+    }
+
+    function Get-SafeErrorMessage {
+        param($ErrorRecord)
+        $msg = [string]$ErrorRecord.Exception.Message
+        $status = $null
+        try { $status = [int]$ErrorRecord.Exception.Response.StatusCode } catch { }
+        if ($status -eq 401 -or $status -eq 403 -or $msg -match '(?i)unauthorized|forbidden|invalid api key|authentication') {
+            return 'API authentication failed or key is invalid'
+        }
+        if ($status) { return "HTTP $status call failed" }
+        if ($msg.Length -gt 240) { return $msg.Substring(0, 240) }
+        return $msg
+    }
+
+    function Test-JsonSchemaUnsupported {
+        param($ErrorRecord)
+        $msg = [string]$ErrorRecord.Exception.Message
+        try {
+            $reader = New-Object System.IO.StreamReader($ErrorRecord.Exception.Response.GetResponseStream())
+            $body = $reader.ReadToEnd()
+            if ($body) { $msg += " $body" }
+        } catch { }
+        return ($msg -match '(?i)json_schema|response_format|unsupported|not support')
+    }
+
+    function Build-Body {
+        param($Request, [string]$Format)
+        $temperature = if ($null -ne $Request.temperature) { [double]$Request.temperature } else { 0.7 }
+        $maxTokens = if ($null -ne $Request.max_tokens) { [int]$Request.max_tokens } else { 8000 }
+        $messages = @()
+        $messages += @{ role = 'system'; content = [string]$Request.system_prompt }
+        $messages += @{ role = 'user'; content = [string]$Request.user_prompt }
+        $body = [ordered]@{
+            model = [string]$Request.model
+            messages = $messages
+            temperature = $temperature
+            max_tokens = $maxTokens
+        }
+        if ($Format -eq 'json_schema') {
+            $schema = $Request.schema
+            if ($null -eq $schema) { $schema = @{ type = 'object' } }
+            $schemaName = ('prism_' + ([string]$Request.id -replace '[^A-Za-z0-9_]', '_'))
+            $body.response_format = @{ type = 'json_schema'; json_schema = @{ name = $schemaName; schema = $schema; strict = $true } }
+        }
+        elseif ($Format -eq 'json_object') {
+            $body.response_format = @{ type = 'json_object' }
+        }
+        return $body
+    }
+
+    function Invoke-Chat {
+        param($Request, $ProviderConfig, [int]$TimeoutSec, [string]$Format)
+        $uri = "$($ProviderConfig.Base)/v1/chat/completions"
+        $headers = @{ Authorization = "Bearer $($ProviderConfig.Key)"; 'Content-Type' = 'application/json' }
+        $body = Build-Body -Request $Request -Format $Format
+        $json = $body | ConvertTo-Json -Depth 80
+        return Invoke-RestMethod -Method Post -Uri $uri -Headers $headers -Body $json -TimeoutSec $TimeoutSec
+    }
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $format = if ($Request.response_format) { [string]$Request.response_format } else { 'json_schema' }
+    $providerName = $null
+    $rawContent = $null
+    $downgraded = $false
+    try {
+        $providerName = Get-ModelProvider -Model ([string]$Request.model) -SkillRoot (Split-Path -Parent $ScriptRoot)
+        $providerConfig = Get-ProviderConfig -Model ([string]$Request.model) -ScriptRoot $ScriptRoot
+        $providerName = $providerConfig.Provider
+        try {
+            $apiResponse = Invoke-Chat -Request $Request -ProviderConfig $providerConfig -TimeoutSec $TimeoutSec -Format $format
+        }
+        catch {
+            if ($format -eq 'json_schema' -and (Test-JsonSchemaUnsupported $_)) {
+                $downgraded = $true
+                $format = 'json_object'
+                $apiResponse = Invoke-Chat -Request $Request -ProviderConfig $providerConfig -TimeoutSec $TimeoutSec -Format $format
+            }
+            else { throw }
+        }
+
+        $rawContent = [string]$apiResponse.choices[0].message.content
+        $content = $rawContent
+        if ($format -ne 'text') {
+            try { $content = $rawContent | ConvertFrom-Json } catch {
+                $sw.Stop()
+                return [pscustomobject]@{
+                    id = [string]$Request.id; status = 'invalid_response'; content = $null; raw_content = $(if ($rawContent) { $rawContent } else { '' })
+                    tokens_used = $(if ($apiResponse.usage) { $apiResponse.usage } else { @{} }); latency_ms = [int]$sw.ElapsedMilliseconds
+                    error = 'Model returned invalid JSON'; retry_count = 0; provider = $providerName
+                    response_format_downgraded = $downgraded
+                }
+            }
+        }
+        $sw.Stop()
+        return [pscustomobject]@{
+            id = [string]$Request.id; status = 'success'; content = $content; raw_content = $(if ($rawContent) { $rawContent } else { '' })
+            tokens_used = $(if ($apiResponse.usage) { $apiResponse.usage } else { @{} }); latency_ms = [int]$sw.ElapsedMilliseconds
+            error = $null; retry_count = 0; provider = $providerName
+            response_format_downgraded = $downgraded
+        }
+    }
+    catch {
+        $sw.Stop()
+        $status = 'failed'
+        $message = Get-SafeErrorMessage $_
+        if ($message -match '(?i)timed out|timeout') { $status = 'timeout' }
+        return [pscustomobject]@{
+            id = [string]$Request.id; status = $status; content = $null; raw_content = $(if ($rawContent) { $rawContent } else { '' })
+            tokens_used = @{}; latency_ms = [int]$sw.ElapsedMilliseconds
+            error = $message; retry_count = 0; provider = $(if ($providerName) { $providerName } else { '' })
+            response_format_downgraded = $downgraded
+        }
+    }
+}
+
+try {
+    $started = Get-Date
+    $inputJson = Read-JsonFile -Path $RequestFile
+    Test-PanelRequest -InputObject $inputJson
+    $requests = @($inputJson.requests)
+    $timeoutSec = [int]$inputJson.timeout_seconds
+    $parallel = [bool]$inputJson.parallel
+
+    if ($parallel -and $requests.Count -gt 1 -and $PSVersionTable.PSVersion.Major -ge 7) {
+        $results = $requests | ForEach-Object -Parallel { & $using:Worker $_ $using:timeoutSec $using:ScriptRoot } -ThrottleLimit 4
+        $mode = 'parallel-ps7'
+    }
+    elseif ($parallel -and $requests.Count -gt 1) {
+        $jobs = foreach ($request in $requests) {
+            Start-Job -ScriptBlock $Worker -ArgumentList $request, $timeoutSec, $ScriptRoot
+        }
+        $results = @()
+        foreach ($job in $jobs) {
+            if (Wait-Job -Job $job -Timeout ($timeoutSec + 10)) {
+                $results += Receive-Job -Job $job
+            }
+            else {
+                Stop-Job -Job $job | Out-Null
+                $results += [pscustomobject]@{ id = 'unknown'; status = 'timeout'; content = $null; raw_content = ''; tokens_used = @{}; latency_ms = ($timeoutSec * 1000); error = 'job timeout'; retry_count = 0; provider = '' }
+            }
+            Remove-Job -Job $job -Force | Out-Null
+        }
+        $mode = 'sequential-ps51-fallback'
+    }
+    else {
+        $results = foreach ($request in $requests) { & $Worker $request $timeoutSec $ScriptRoot }
+        $mode = 'sequential-explicit'
+    }
+
+    $cleanResults = foreach ($result in @($results)) {
+        [ordered]@{
+            id = [string]$result.id
+            status = [string]$result.status
+            content = $result.content
+            raw_content = $(if ($null -ne $result.raw_content) { [string]$result.raw_content } else { '' })
+            tokens_used = $(if ($null -ne $result.tokens_used) { $result.tokens_used } else { @{} })
+            latency_ms = [int]$result.latency_ms
+            error = $(if ($null -ne $result.error) { [string]$result.error } else { $null })
+            retry_count = [int]$result.retry_count
+            provider = $(if ($null -ne $result.provider) { [string]$result.provider } else { '' })
+            response_format_downgraded = [bool]$result.response_format_downgraded
+        }
+    }
+    $finished = Get-Date
+    $out = [ordered]@{
+        results = @($cleanResults)
+        meta = [ordered]@{
+            started_at = $started.ToString('o')
+            finished_at = $finished.ToString('o')
+            total_duration_ms = [int](New-TimeSpan -Start $started -End $finished).TotalMilliseconds
+            concurrency_mode = $mode
+        }
+    }
+    Write-Utf8NoBomFile -Path $OutputFile -Content ($out | ConvertTo-Json -Depth 100)
+    exit 0
+}
+catch {
+    Write-Error "panel.ps1 input error: $($_.Exception.Message)"
+    exit 1
+}

@@ -1,0 +1,184 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "prism/schema-internal.json",
+  "title": "Prism Internal Schema (内部流程 Schema · 必填层)",
+  "description": "V4.1 §9.1 — 无此 Schema 无法运转分歧度计算 / 循环退出判据 / Final Audit。所有专家、Integrator、Auditor 的输出都必须符合此 schema。",
+  "type": "object",
+  "required": [
+    "depth",
+    "question_summary",
+    "shared_facts_reference",
+    "key_claims",
+    "recommendation",
+    "assumptions",
+    "risks",
+    "dissenting_note",
+    "confidence_summary",
+    "traceability",
+    "human_gate_required"
+  ],
+  "properties": {
+    "depth": {
+      "type": "string",
+      "enum": ["standard", "deep"],
+      "description": "V4.1 明确删除 quick 档"
+    },
+    "question_summary": {
+      "type": "string",
+      "minLength": 5,
+      "description": "澄清后问题的一句话摘要"
+    },
+    "shared_facts_reference": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "引用契约 shared_facts[] 的 id 列表；可为空数组"
+    },
+    "key_claims": {
+      "type": "array",
+      "minItems": 1,
+      "description": "⭐ 核心机制字段。内部必填，无此无法算 D_conflict/D_uncertainty/D_coverage。是否在报告展示由 §9.2 key_claims_display 决定。",
+      "items": {
+        "type": "object",
+        "required": ["claim", "type", "evidence_needed"],
+        "properties": {
+          "claim_id": { "type": "string", "pattern": "^C[0-9]{3}$" },
+          "claim": { "type": "string", "minLength": 5 },
+          "type": {
+            "type": "string",
+            "enum": ["consensus", "conflict", "single_source", "gap"]
+          },
+          "evidence_needed": {
+            "type": "boolean",
+            "description": "涉及事实的字段必须为 true；主 Agent 后置 Grounding 只搜此类"
+          },
+          "sources": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "专家估计的来源类型或 URL；主 Agent 会验证"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "verification_status": {
+            "type": "string",
+            "enum": ["verified", "unverified", "disproved", "pending"],
+            "description": "初始 pending，后置 Grounding 更新"
+          },
+          "disagreement_tag": {
+            "type": ["string", "null"],
+            "enum": ["fact-based", "value-based", "preference-based", null],
+            "description": "只对 type=conflict 有效，Analyst 打"
+          },
+          "source_expert": {
+            "type": "string",
+            "enum": ["A", "B", "C", "consensus", "analyst_gap"],
+            "description": "Integrator 融合时标注来源"
+          }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "required": ["primary", "confidence"],
+      "properties": {
+        "primary": { "type": "string", "minLength": 10 },
+        "conditions": {
+          "type": "string",
+          "description": "在什么前提下这个推荐成立（不可逆决策时必填）"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        }
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "关键前提假设；可为空数组"
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["risk"],
+        "properties": {
+          "risk": { "type": "string" },
+          "severity": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "mitigation": { "type": "string" },
+          "source": {
+            "type": "string",
+            "enum": ["expert_A", "expert_B", "expert_C", "final_audit", "shared_facts"]
+          }
+        }
+      }
+    },
+    "dissenting_note": {
+      "type": "string",
+      "minLength": 10,
+      "description": "强制反思：如果我错了，可能错在哪。禁止填空字符串或'我不会错'。"
+    },
+    "confidence_summary": {
+      "type": "object",
+      "required": ["overall"],
+      "properties": {
+        "consistency": {
+          "type": "string",
+          "description": "AI 一致度（S10 后填）"
+        },
+        "verified_ratio": {
+          "type": "string",
+          "description": "外部验证率百分比（S10 后填）"
+        },
+        "coverage": {
+          "type": "string",
+          "description": "盲区覆盖度（D_coverage 的展示形式）"
+        },
+        "overall": {
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        }
+      }
+    },
+    "traceability": {
+      "type": "object",
+      "required": ["grounding_source", "grounding_level"],
+      "description": "揭盲信息 · V4.1 硬要求 grounding_source 诚实标注",
+      "properties": {
+        "expert_a_actual": {
+          "type": "string",
+          "description": "S15 填，S10 之前为空"
+        },
+        "expert_b_actual": { "type": "string" },
+        "expert_c_actual": { "type": "string" },
+        "grounding_source": {
+          "type": "string",
+          "const": "主 Agent 单源（专家无搜索能力）",
+          "description": "⭐ V4.1 诚实标注硬要求。当前架构下专家 A/B/C 没有 WebSearch 能力，Grounding 实质是主 Agent 单源。"
+        },
+        "grounding_level": {
+          "type": "string",
+          "enum": ["L0", "L1", "L2"]
+        },
+        "convergence_status": {
+          "type": "string",
+          "enum": ["converged", "max_rounds", "grounded_exit", "user_abort", "pending"]
+        },
+        "total_rounds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "human_gate_triggered": { "type": "boolean" }
+      }
+    },
+    "human_gate_required": {
+      "type": "boolean",
+      "description": "S16 会读此字段决定是否强制 Human Gate"
+    }
+  }
+}

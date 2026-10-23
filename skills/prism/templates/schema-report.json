@@ -1,0 +1,164 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "prism/schema-report.json",
+  "title": "Prism Report Schema (报告展示 Schema · 条件层)",
+  "description": "V4.1 §9.2 — 内部可能产出，但是否进报告由 metadata.sections_to_include + §5.3 章节规则决定。⚠️ 与 schema-internal.json 的 key_claims 严格区分：内部 key_claims 始终存在（供分歧度计算 / Cross Review 使用），key_claims_display 仅决定'是否渲染到报告章节里'。",
+  "type": "object",
+  "properties": {
+    "candidate_solutions": {
+      "type": "array",
+      "description": "展示条件：metadata.has_solution_component == true",
+      "items": {
+        "type": "object",
+        "required": ["name", "components", "pros", "cons"],
+        "properties": {
+          "name": { "type": "string" },
+          "components": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "pros": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "cons": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "suitable_for": { "type": "string" },
+          "unsuitable_for": { "type": "string" },
+          "implementation_steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "step": { "type": "string" },
+                "success_criteria": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "trade_offs": {
+      "type": "array",
+      "description": "展示条件：metadata.has_tradeoff_component == true",
+      "items": {
+        "type": "object",
+        "required": ["gain", "loss"],
+        "properties": {
+          "gain": { "type": "string" },
+          "loss": { "type": "string" },
+          "when_worth_it": {
+            "type": "string",
+            "description": "在什么条件下这个 trade-off 划算"
+          }
+        }
+      }
+    },
+    "dissenting_opinions": {
+      "type": "array",
+      "description": "展示条件：Cross Review 结束仍有 value-based / preference-based 分歧",
+      "items": {
+        "type": "object",
+        "required": ["view"],
+        "properties": {
+          "view": {
+            "type": "string",
+            "description": "少数派观点"
+          },
+          "under_what_condition": {
+            "type": "string",
+            "description": "在什么情况下应采纳这个视角"
+          },
+          "source_expert": {
+            "type": "string",
+            "enum": ["A", "B", "C"]
+          }
+        }
+      }
+    },
+    "next_steps": {
+      "type": "array",
+      "description": "展示条件：metadata.reversibility == 'irreversible' 或用户明确要求",
+      "items": {
+        "type": "object",
+        "required": ["step"],
+        "properties": {
+          "step": { "type": "string" },
+          "trigger": {
+            "type": "string",
+            "description": "何时触发此步骤"
+          },
+          "stop_loss": {
+            "type": "string",
+            "description": "什么信号出现时应撤退"
+          }
+        }
+      }
+    },
+    "key_claims_display": {
+      "type": "object",
+      "description": "展示条件：depth == 'deep' 或 D_conflict > 0.05。⚠️ 与内部 key_claims 严格区分。",
+      "properties": {
+        "display_note": {
+          "type": "string",
+          "description": "本节内容基于 internal key_claims 提炼，未展示的完整清单在归档 appendix 中"
+        },
+        "consensus_claims": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "共识主张摘要"
+        },
+        "conflict_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "topic": { "type": "string" },
+              "positions": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "single_source_highlights": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "claim": { "type": "string" },
+              "note": {
+                "type": "string",
+                "description": "独家发现说明"
+              }
+            }
+          }
+        },
+        "gaps_identified": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "本次协作发现的盲区（D_coverage 展示形式）"
+        }
+      }
+    },
+    "verified_facts": {
+      "type": "array",
+      "description": "展示条件：metadata.fact_density in ('medium', 'high')",
+      "items": {
+        "type": "object",
+        "required": ["fact", "verification_status"],
+        "properties": {
+          "fact": { "type": "string" },
+          "source": { "type": "string" },
+          "verification_status": {
+            "type": "string",
+            "enum": ["verified", "unverified", "disproved"]
+          },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

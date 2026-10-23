@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://prism.local/schemas/providers.schema.json",
+  "title": "Prism V4.2 Providers Configuration Schema",
+  "description": "Validates ~/.claude/skills/prism/config/providers.json and ~/.prism/providers.json.\n\nDeep merge and null semantics (HC-07):\n- Field NOT present in user override -> inherit from base\n- Field present with value null -> explicit clear (result becomes null)\n- Field present with concrete value -> override\n\nArrays are replaced as a whole (never merged element-wise) to avoid semantic ambiguity.\n\nAPI keys MUST NOT appear in this file. Keys are always looked up via key_env indirection (HC-02).",
+  "type": "object",
+  "required": ["config_version", "providers"],
+  "additionalProperties": false,
+  "properties": {
+    "config_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version. Must be exactly '1.0' for V4.2 (HC-01). Bumping this signals a breaking format change; panel.ps1 will refuse to load unknown versions."
+    },
+    "providers": {
+      "type": "object",
+      "description": "Map of provider alias -> provider config. Alias is user-chosen (e.g. 'tokenopen', 'deepseek', 'moonshot').",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/definitions/provider"
+      }
+    }
+  },
+  "definitions": {
+    "provider": {
+      "type": "object",
+      "required": ["api_style", "base_url", "chat_path", "auth_type", "key_env"],
+      "additionalProperties": false,
+      "properties": {
+        "api_style": {
+          "type": "string",
+          "enum": ["openai-compatible"],
+          "description": "API style. V4.2 only supports 'openai-compatible' (Q1 decision). Future versions may add 'anthropic' / 'gemini' native styles."
+        },
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^(https://|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:|/))",
+          "description": "Base URL. HTTPS is required for remote providers; local HTTP endpoints should use localhost and may be accepted by the runtime."
+        },
+        "chat_path": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Chat completions path appended to base_url (e.g. /v1/chat/completions)."
+        },
+        "auth_type": {
+          "type": "string",
+          "enum": ["bearer"],
+          "description": "Authentication scheme. V4.2 supports 'bearer' (Authorization: Bearer $KEY). Future: 'x-api-key' / 'header-custom'."
+        },
+        "key_env": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "Environment variable name that holds the API key (e.g. PRISM_TOKENOPEN_KEY). Key value itself is NEVER stored in this file (HC-02). Lookup order: process env -> ~/.prism/keys.env -> skill/scripts/keys.env (HC-09)."
+        },
+        "base_env": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "Optional env var name that can override base_url at runtime (HC-10). Explicit null clears any inherited value."
+        },
+        "extra_headers": {
+          "type": ["object", "null"],
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra HTTP headers to include with every request (e.g. {\"X-Custom\": \"foo\"}). Explicit null clears inherited headers."
+        },
+        "request_defaults": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "temperature": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 2
+            },
+            "max_tokens": {
+              "type": ["integer", "null"],
+              "minimum": 100
+            },
+            "top_p": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "description": "Default request params for this provider. Model-level 'overrides' win over these; hard-coded fallbacks (0.7 / 8000) win if both missing."
+        },
+        "timeout_seconds": {
+          "type": ["integer", "null"],
+          "minimum": 10,
+          "maximum": 300,
+          "description": "Per-request timeout. Defaults to 60."
+        },
+        "retry": {
+          "$ref": "#/definitions/retry"
+        }
+      }
+    },
+    "retry": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "Total attempt count (initial + retries). Defaults to 3."
+        },
+        "retry_on_status": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "uniqueItems": true,
+          "description": "HTTP status codes that trigger a retry. Array is REPLACED wholesale in deep merge (not element-merged)."
+        },
+        "retry_on_body_match": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "description": "Regex patterns matched against response body; a match triggers retry (e.g. 'fake_sse_empty_response'). Array is REPLACED wholesale."
+        },
+        "backoff_seconds": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60
+          },
+          "description": "Backoff delays between retries. Array length should equal (max_attempts - 1). Array is REPLACED wholesale."
+        }
+      }
+    }
+  }
+}

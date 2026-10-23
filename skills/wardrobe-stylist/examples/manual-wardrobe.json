@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "item-001",
+      "name": "Navy wool coat",
+      "category": "outerwear",
+      "status": "active",
+      "photos": []
+    },
+    {
+      "id": "item-002",
+      "name": "White cotton shirt",
+      "category": "tops",
+      "status": "active",
+      "photos": []
+    }
+  ]
+}

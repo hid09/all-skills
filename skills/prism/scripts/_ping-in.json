@@ -1,0 +1,18 @@
+{
+  "requests": [
+    {
+      "id": "ping-gpt",
+      "model": "gpt-5",
+      "system_prompt": "You are a health check.",
+      "user_prompt": "Reply with exactly the word: PONG"
+    },
+    {
+      "id": "ping-deepseek",
+      "model": "deepseek-chat",
+      "system_prompt": "You are a health check.",
+      "user_prompt": "Reply with exactly the word: PONG"
+    }
+  ],
+  "timeout_seconds": 30,
+  "parallel": true
+}

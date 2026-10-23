@@ -1,0 +1,45 @@
+{
+  "config_version": "1.0",
+  "providers": {
+    "tokenopen": {
+      "api_style": "openai-compatible",
+      "base_url": "https://www.tokenopen.ai",
+      "chat_path": "/v1/chat/completions",
+      "auth_type": "bearer",
+      "key_env": "PRISM_TOKENOPEN_KEY",
+      "base_env": "PRISM_TOKENOPEN_BASE",
+      "extra_headers": {},
+      "request_defaults": {
+        "temperature": 0.7,
+        "max_tokens": 8000
+      },
+      "timeout_seconds": 60,
+      "retry": {
+        "max_attempts": 3,
+        "retry_on_status": [429, 503, 504],
+        "retry_on_body_match": ["fake_sse_empty_response"],
+        "backoff_seconds": [2, 5]
+      }
+    },
+    "deepseek": {
+      "api_style": "openai-compatible",
+      "base_url": "https://api.deepseek.com",
+      "chat_path": "/v1/chat/completions",
+      "auth_type": "bearer",
+      "key_env": "PRISM_DEEPSEEK_KEY",
+      "base_env": "PRISM_DEEPSEEK_BASE",
+      "extra_headers": {},
+      "request_defaults": {
+        "temperature": 0.7,
+        "max_tokens": 8000
+      },
+      "timeout_seconds": 60,
+      "retry": {
+        "max_attempts": 3,
+        "retry_on_status": [400, 429, 503, 504],
+        "retry_on_body_match": [],
+        "backoff_seconds": [2, 5]
+      }
+    }
+  }
+}

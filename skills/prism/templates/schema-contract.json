@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "prism/schema-contract.json",
+  "title": "Prism Contract Schema (给专家看的契约)",
+  "description": "S05 contract-builder 生成。所有专家收到相同的契约。⚠️ 不含 mode 字段（V4 已删）、不含 metadata（内部对象）、不含真实敏感实体（S05 软性代号化后的版本）。",
+  "type": "object",
+  "required": [
+    "depth",
+    "question",
+    "context",
+    "shared_facts",
+    "output_requirements",
+    "output_schema"
+  ],
+  "properties": {
+    "depth": {
+      "type": "string",
+      "enum": ["standard", "deep"]
+    },
+    "question": {
+      "type": "string",
+      "minLength": 10,
+      "description": "clarified_question 完整版（已软性代号化）"
+    },
+    "context": {
+      "type": "object",
+      "description": "澄清阶段收集的背景信息",
+      "properties": {
+        "现状": { "type": "string" },
+        "问题": { "type": "string" },
+        "目标": { "type": "string" },
+        "约束": { "type": "string" },
+        "时间": { "type": "string" }
+      }
+    },
+    "shared_facts": {
+      "type": "array",
+      "description": "前置 Grounding 结果",
+      "items": {
+        "type": "object",
+        "required": ["fact"],
+        "properties": {
+          "fact_id": {
+            "type": "string",
+            "pattern": "^F[0-9]{3}$"
+          },
+          "fact": { "type": "string" },
+          "source": {
+            "type": "string",
+            "description": "URL 或来源类型"
+          },
+          "verified_at": { "type": "string" },
+          "reliability": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          }
+        }
+      }
+    },
+    "output_requirements": {
+      "type": "object",
+      "required": [
+        "claims_required",
+        "evidence_needed_marking",
+        "risks_required",
+        "assumptions_required",
+        "dissenting_note_required"
+      ],
+      "description": "V4.1 通用输出要求（替代 V3 的 mode 字段）",
+      "properties": {
+        "claims_required": {
+          "type": "boolean",
+          "const": true
+        },
+        "evidence_needed_marking": {
+          "type": "boolean",
+          "const": true
+        },
+        "risks_required": {
+          "type": "boolean",
+          "const": true
+        },
+        "assumptions_required": {
+          "type": "boolean",
+          "const": true
+        },
+        "dissenting_note_required": {
+          "type": "boolean",
+          "const": true
+        }
+      }
+    },
+    "output_schema": {
+      "type": "object",
+      "description": "引用 schema-internal.json 全文，专家产出必须符合"
+    },
+    "evaluation_criteria": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "not": {
+    "anyOf": [
+      { "required": ["mode"] },
+      { "required": ["metadata"] }
+    ]
+  }
+}

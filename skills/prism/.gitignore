@@ -1,0 +1,7 @@
+scripts/keys.env
+scripts/keys.local.env
+*.local.env
+outputs/
+config/keys.env
+*.log
+tmp/

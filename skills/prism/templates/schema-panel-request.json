@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "prism/schema-panel-request.json",
+  "title": "panel.ps1 输入契约 (in.json)",
+  "description": "V4.1 §7.2 / §10.4 — 主 Agent 通过 Bash 工具调用 panel.ps1 时传入的 JSON 文件结构。",
+  "type": "object",
+  "required": ["requests", "timeout_seconds", "parallel"],
+  "properties": {
+    "requests": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["id", "model", "system_prompt", "user_prompt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "调用唯一标识",
+            "examples": ["expert_A", "expert_B", "expert_C", "analyst", "integrator_I", "integrator_II", "auditor_risk", "auditor_consistency", "auditor_boundary"]
+          },
+          "model": {
+            "type": "string",
+            "description": "从 config/models.json 查表得到的具体 model ID",
+            "examples": ["gpt-5.4-mini", "gemini-3.1-pro-preview", "deepseek-v4-pro"]
+          },
+          "system_prompt": {
+            "type": "string",
+            "description": "已填充占位符的完整 system prompt。⚠️ 硬约束：不能含 'GPT'/'Gemini'/'DeepSeek'/'Claude' 品牌词"
+          },
+          "user_prompt": {
+            "type": "string",
+            "description": "已 JSON.stringify 的契约或上下文对象"
+          },
+          "response_format": {
+            "type": "string",
+            "enum": ["text", "json_object", "json_schema"],
+            "default": "json_schema"
+          },
+          "schema": {
+            "type": "object",
+            "description": "response_format=json_schema 时的 JSON Schema"
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2,
+            "default": 0.7
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 1000,
+            "default": 8000
+          }
+        }
+      }
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 300,
+      "default": 60,
+      "description": "单个 request 的超时（秒）"
+    },
+    "parallel": {
+      "type": "boolean",
+      "default": true,
+      "description": "true 时用 PS 7.x 的 ForEach-Object -Parallel 或 PS 5.1 的 Start-Job"
+    },
+    "cache_key_prefix": {
+      "type": "string",
+      "description": "可选 · 用于同一 session 的 grounding 缓存 key 前缀"
+    }
+  }
+}

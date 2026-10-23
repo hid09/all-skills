@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://prism.local/schemas/schema-mini-audit.json",
+  "title": "Prism V4.2 Mini-Auditor Output Schema",
+  "description": "Validates the JSON output of prompts/mini-auditor-combined.md (Standard tier, Flow B Step 4).\n\nEnum values (HC-15):\n- priority: MUST be one of [high, medium, low]\n- severity: MUST be one of [high, medium, low]\n\nNo free-form values outside that enum are permitted.",
+  "type": "object",
+  "required": ["consensus", "fact_check", "risks"],
+  "additionalProperties": false,
+  "properties": {
+    "consensus": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "minItems": 3,
+      "maxItems": 8,
+      "description": "Claims agreed upon in the integrated version. 3-5 preferred; each item <= 30 CJK chars / 25 English words."
+    },
+    "fact_check": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim", "evidence_needed", "priority"],
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The specific factual claim that needs external verification."
+          },
+          "evidence_needed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "What kind of evidence would confirm/refute (e.g. 'official documentation', 'latest published data')."
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Priority for verification. HC-15: MUST be exactly one of [high, medium, low]. No other values allowed."
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 8
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["risk", "severity", "mitigation"],
+        "additionalProperties": false,
+        "properties": {
+          "risk": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The specific risk of adopting/using the proposal."
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Risk severity. HC-15: MUST be exactly one of [high, medium, low]. No other values allowed."
+          },
+          "mitigation": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Concrete mitigation action."
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 6
+    }
+  }
+}

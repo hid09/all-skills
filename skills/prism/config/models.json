@@ -1,0 +1,44 @@
+{
+  "models": {
+    "gpt-5.4-mini": {
+      "provider": "tokenopen",
+      "model_id": "gpt-5.4-mini",
+      "model_type": "standard",
+      "note": "V4.2 default standard model"
+    },
+    "gemini-3.1-pro-preview": {
+      "provider": "tokenopen",
+      "model_id": "gemini-3.1-pro-preview",
+      "model_type": "reasoning",
+      "overrides": {
+        "max_tokens": 16000
+      }
+    },
+    "deepseek-v4-pro": {
+      "provider": "deepseek",
+      "model_id": "deepseek-v4-pro",
+      "model_type": "reasoning",
+      "overrides": {
+        "max_tokens": 20000
+      }
+    },
+    "gpt-5.5": {
+      "provider": "tokenopen",
+      "model_id": "gpt-5.5",
+      "model_type": "reasoning",
+      "disabled_by_default": true,
+      "note": "Backup only; tokenopen upstream has fake SSE / 504 risk"
+    },
+    "deepseek-chat": {
+      "provider": "deepseek",
+      "model_id": "deepseek-chat",
+      "model_type": "standard",
+      "note": "Backup; provider backend may route automatically"
+    }
+  },
+  "pools": {
+    "standard_pool": ["gpt-5.4-mini", "deepseek-v4-pro"],
+    "deep_pool": ["gpt-5.4-mini", "gemini-3.1-pro-preview", "deepseek-v4-pro"],
+    "backup_pool": ["deepseek-chat", "gpt-5.5"]
+  }
+}

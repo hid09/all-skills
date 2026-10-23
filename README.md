@@ -1,10 +1,32 @@
-# 衣橱穿搭套件
+# all-skills · 个人 Agent Skills 套件
 
-这是一个可复制到 GitHub 的本地衣橱套件：
+这是一个可复制到 GitHub 的个人 Agent Skills 仓库，包含三个可独立使用的 Skill：
 
 - `wardrobe/`：本地浏览器衣橱录入与管理工具；
 - `skills/wardrobe-stylist/`：给 Codex/Agent 使用的穿搭 Skill；
+- `skills/flowmaker/`：单 HTML、零后端、可拖拽编辑的流程图 Skill；
+- `skills/prism/`：多 AI / 多 Agent 交叉分析和议会式评审 Skill；
 - 每个使用者默认拥有自己的 `wardrobe/data/`，照片和清单不会进入 Skill 文件夹。
+
+## Skills 快速选择
+
+| Skill | 适合 | 不适合 |
+|---|---|---|
+| `wardrobe-stylist` | 真实衣橱穿搭、趋势适配、风格校准、缺口和购物研究 | 自动购买、批量抓取登录限制页面 |
+| `flowmaker` | 审批流、决策树、onboarding、系统步骤的可编辑网页图 | 只要静态 Mermaid、批量拓扑图 |
+| `prism` | 复杂调研、方案比较、技术/商业决策、多专家交叉验证 | 简单问答、情绪问题、几秒内要答案的问题 |
+
+三个 Skill 都只携带可复用说明、示例和脚本；个人照片、数据库、密钥和运行产物不进入公开包。
+
+## 单独安装 Skill
+
+把仓库地址交给 Agent，并指定需要安装的目录：
+
+```text
+请从这个仓库安装 skills/wardrobe-stylist、skills/flowmaker 或 skills/prism 到本机 Agent Skills 目录，并只安装我指定的 Skill。
+```
+
+衣橱 Skill 需要用户自行配置 `WARDROBE_URL` 或 `WARDROBE_DATA_DIR`；flowmaker 生成的 HTML 运行时需要访问 CDN；Prism 需要用户自行配置可信 Provider 和 API key。
 
 ## 给 Agent 的安装方式
 

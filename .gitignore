@@ -6,3 +6,7 @@ dist/
 *.zip
 *.log
 node_modules/
+skills/prism/outputs/
+skills/prism/scripts/keys.env
+skills/prism/scripts/keys.local.env
+skills/prism/config/keys.env

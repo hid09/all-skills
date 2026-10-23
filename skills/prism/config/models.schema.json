@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://prism.local/schemas/models.schema.json",
+  "title": "Prism V4.2 Models Configuration Schema",
+  "description": "Validates ~/.claude/skills/prism/config/models.json and ~/.prism/models.local.json.\n\nMerge semantics (HC-08):\n- 'models' object: same model_id key -> deep merge; different key -> append\n- 'pools' object: same pool name -> user array REPLACES base array (not merged); different name -> append\n\nUnlike providers, this schema does NOT require config_version (models.json is data-only and safer to evolve).",
+  "type": "object",
+  "required": ["models", "pools"],
+  "additionalProperties": false,
+  "properties": {
+    "models": {
+      "type": "object",
+      "description": "Map of model alias (unique in this skill) -> model config. Alias is what appears in pools and in panel.ps1 requests.",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/definitions/model"
+      }
+    },
+    "pools": {
+      "type": "object",
+      "description": "Named model pools. standard_pool / deep_pool / backup_pool are reserved names used by Flow B.",
+      "required": ["standard_pool", "deep_pool"],
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "uniqueItems": true
+      },
+      "properties": {
+        "standard_pool": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "minItems": 1,
+          "description": "Models eligible for Standard tier. Router picks 2 from here (HC-13)."
+        },
+        "deep_pool": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "minItems": 2,
+          "description": "Models eligible for Deep tier. Deep flow picks 3."
+        },
+        "backup_pool": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "description": "Fallback models used when primary provider fails after retries."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "model": {
+      "type": "object",
+      "required": ["provider", "model_id", "model_type"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Provider alias defined in providers.json."
+        },
+        "model_id": {
+          "type": "string",
+          "description": "Exact model identifier sent in the API request (e.g. 'gpt-5.4-mini', 'deepseek-v4-pro')."
+        },
+        "model_type": {
+          "type": "string",
+          "enum": ["standard", "reasoning"],
+          "description": "Standard: fast, low-latency chat. Reasoning: heavier chain-of-thought models (require max_tokens >= 16000 auto-floor)."
+        },
+        "overrides": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "temperature": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 2
+            },
+            "max_tokens": {
+              "type": ["integer", "null"],
+              "minimum": 1000
+            },
+            "top_p": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "description": "Model-level parameter overrides. Highest precedence over provider.request_defaults."
+        },
+        "disabled_by_default": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, this model is skipped in pool selection unless explicitly requested. Used for known-flaky models (e.g. gpt-5.5 fake SSE)."
+        },
+        "note": {
+          "type": "string",
+          "description": "Free-form annotation, e.g. why the model is disabled or preferred."
+        }
+      }
+    }
+  }
+}

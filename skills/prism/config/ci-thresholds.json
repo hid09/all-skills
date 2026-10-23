@@ -1,0 +1,7 @@
+{
+  "D_conflict": 0.15,
+  "D_uncertainty": 0.25,
+  "D_int": 0.20,
+  "max_rounds": 3,
+  "D_coverage_gate": false
+}

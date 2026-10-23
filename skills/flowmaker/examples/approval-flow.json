@@ -1,0 +1,17 @@
+{
+  "title": "采购审批",
+  "direction": "TB",
+  "nodes": [
+    {"id":"start","title":"提交申请","shape":"terminator","variant":"start"},
+    {"id":"review","title":"部门初审"},
+    {"id":"approved","title":"通过预算？","shape":"decision"},
+    {"id":"end","title":"完成采购","shape":"terminator","variant":"gold"},
+    {"id":"reject","title":"退回修改","variant":"muted"}
+  ],
+  "edges": [
+    {"source":"start","target":"review"},
+    {"source":"review","target":"approved"},
+    {"source":"approved","target":"end","label":"是"},
+    {"source":"approved","target":"reject","label":"否","dashed":true}
+  ]
+}

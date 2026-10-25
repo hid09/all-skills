@@ -1,4 +1,6 @@
-# 秋冬衣橱工具
+# 本地衣橱工具
+
+本工具与 [wardrobe-stylist Skill](../skills/wardrobe-stylist/SKILL.md) 配套：网页录入自己的衣物，Agent 读取衣橱并提供穿搭建议。首次安装与开始使用见 [套件说明](../README.md)。新用户从空衣橱开始，无需个人迁移文件。
 
 要求 Node.js 22.5 或更高版本（推荐 Node.js 24+；当前实现使用 Node 原生 SQLite）。
 
@@ -21,9 +23,6 @@ node wardrobe/app/server.js
 - 数据库：`wardrobe/data/wardrobe.db`
 - AI 清单：`wardrobe/data/wardrobe.json`
 - 回收站：`wardrobe/data/trash/`
-
-备份时先停止服务，再复制整个 `wardrobe/data/` 目录；运行中的 SQLite WAL 文件可能尚未合并到主数据库文件。
-
 
 当前实现说明：展示图目录会保留一份与原图对应的副本，界面通过 CSS 完成缩略展示；后续如图片量很大，可再接入图片缩放处理。
 ## 同一网络访问

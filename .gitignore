@@ -10,3 +10,13 @@ skills/prism/outputs/
 skills/prism/scripts/keys.env
 skills/prism/scripts/keys.local.env
 skills/prism/config/keys.env
+
+# Workstation-only maintenance tools and notes
+/MIGRATION.md
+/BACKUP.md
+/SKILLS_CATALOG.md
+/SKILLS_AUDIT_*.md
+/scripts/package-personal-bundle.cmd
+/scripts/package-personal-bundle.ps1
+/scripts/restore-personal-bundle.cmd
+/scripts/restore-personal-bundle.ps1

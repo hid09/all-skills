@@ -1,92 +1,67 @@
-# all-skills · 个人 Agent Skills 套件
+# all-skills · Agent Skills 与衣橱穿搭套件
 
-这是一个可复制到 GitHub 的个人 Agent Skills 仓库，包含三个可独立使用的 Skill：
+这里提供三个 Skill。其中，衣橱工具与 `wardrobe-stylist` 配套使用：安装后上传自己的衣服图片，再让 Agent 根据真实衣橱给出穿搭建议。
 
-- `wardrobe/`：本地浏览器衣橱录入与管理工具；
-- `skills/wardrobe-stylist/`：给 Codex/Agent 使用的穿搭 Skill；
-- `skills/flowmaker/`：单 HTML、零后端、可拖拽编辑的流程图 Skill；
-- `skills/prism/`：多 AI / 多 Agent 交叉分析和议会式评审 Skill；
-- 每个使用者默认拥有自己的 `wardrobe/data/`，照片和清单不会进入 Skill 文件夹。
-
-## Skills 快速选择
-
-| Skill | 适合 | 不适合 |
+| 能力 | 入口 | 用途 |
 |---|---|---|
-| `wardrobe-stylist` | 真实衣橱穿搭、趋势适配、风格校准、缺口和购物研究 | 自动购买、批量抓取登录限制页面 |
-| `flowmaker` | 审批流、决策树、onboarding、系统步骤的可编辑网页图 | 只要静态 Mermaid、批量拓扑图 |
-| `prism` | 复杂调研、方案比较、技术/商业决策、多专家交叉验证 | 简单问答、情绪问题、几秒内要答案的问题 |
+| 衣橱穿搭套件 | `wardrobe/` + `skills/wardrobe-stylist/` | 图片录入、衣橱管理、穿搭建议、趋势适配与购物缺口分析 |
+| 可编辑流程图 | [flowmaker](skills/flowmaker/SKILL.md) | 生成可拖拽编辑、保存和导出的单 HTML 流程图 |
+| 多专家协作分析 | [prism](skills/prism/SKILL.md) | 复杂调研、方案比较和保留分歧的多 AI 分析 |
 
-三个 Skill 都只携带可复用说明、示例和脚本；个人照片、数据库、密钥和运行产物不进入公开包。
+## 衣橱套件：交给 Agent 安装
 
-## 单独安装 Skill
-
-把仓库地址交给 Agent，并指定需要安装的目录：
+将下面的提示词发给支持本地文件和终端操作的 Agent：
 
 ```text
-请从这个仓库安装 skills/wardrobe-stylist、skills/flowmaker 或 skills/prism 到本机 Agent Skills 目录，并只安装我指定的 Skill。
+请从 https://github.com/hid09/all-skills.git 安装衣橱穿搭套件。
+克隆仓库，检查 Node.js 22.5 或以上版本；安装完整的
+skills/wardrobe-stylist 目录到当前 Agent 支持的 Skills 目录，
+并启动仓库中的 wardrobe/app/server.js。
+保留衣橱工具和 Skill 的配套关系，不要只安装 Skill 后就结束。
+配置 WARDROBE_URL 指向实际服务地址，验证 /api/health 和 /api/wardrobe。
+打开衣橱网页，告诉我如何上传第一件衣物，再根据我的真实单品提供穿搭建议。
+新用户使用自己的空衣橱，不需要任何个人迁移包。
 ```
 
-衣橱 Skill 需要用户自行配置 `WARDROBE_URL` 或 `WARDROBE_DATA_DIR`；flowmaker 生成的 HTML 运行时需要访问 CDN；Prism 需要用户自行配置可信 Provider 和 API key。
+## 手动安装与启动
 
-## 给 Agent 的安装方式
-
-把仓库地址交给 Agent，并说明：
-
-> 请安装这个仓库里的 `skills/wardrobe-stylist` 到本机 Codex skills 目录，并在仓库的 `wardrobe/` 目录启动本地衣橱服务。
-
-如果使用支持 skills 的安装器，也可以从仓库中的 `skills/wardrobe-stylist` 目录安装。安装完成后重新打开一个 Agent 会话，让 Skill 索引刷新。
-
-在 Windows 上也可以直接在仓库根目录运行：
+要求 Node.js 22.5 或以上版本，推荐 24+。下载仓库后，在仓库根目录执行：
 
 ```powershell
-install-skill.cmd
+git clone https://github.com/hid09/all-skills.git
+cd all-skills
+node scripts/install-skill.mjs
+node wardrobe/app/server.js
 ```
 
-## 启动录入工具
+安装脚本默认安装到 Codex Skills 目录；其他 Agent 请将完整的 `skills/wardrobe-stylist/` 安装到其支持的 Skills 目录。安装后可能需要重新打开 Agent 会话。
 
-要求 Node.js 22.5 或更高版本（推荐 Node.js 24+）。在仓库根目录执行：
+Windows 也可以先运行 `install-skill.cmd`，再运行 `start.cmd`。
 
-```powershell
-start.cmd
-```
+浏览器打开 <http://127.0.0.1:4173/>。停止服务时，在运行窗口按 `Ctrl+C`。若端口已被占用，请检查现有服务，或设置 `PORT` 并同步调整 `WARDROBE_URL`。
 
-停止服务：在运行窗口按 `Ctrl+C`。如果端口 4173 已被占用，先停止旧的衣橱服务，或设置 `PORT` 后启动。
+## 上传图片并开始穿搭
 
-浏览器打开 <http://127.0.0.1:4173/>。
+1. 在网页点击“＋ 添加”或“添加第一件衣物”，上传自己的衣物照片。
+2. 同一件衣物的实拍、模特和详情图放在同一个单品里；一次上传多张照片默认组成一个单品，不同衣物请分别添加。
+3. 在照片下选择来源标签，补充名称、分类等资料后保存。首张照片用作列表首图。
+4. 对 Agent 说：“读取我的本地衣橱，根据我的城市、天气和场合，给我三套不同风格的穿搭。”首次使用可先填写风格偏好。
 
-要让同一 Wi-Fi 下的其他设备访问：
+Skill 优先读取本地服务。默认地址为 `http://127.0.0.1:4173`；服务地址不同时配置 `WARDROBE_URL`。也可用 `WARDROBE_DATA_DIR` 指向自己的数据目录。
 
-```powershell
-cd wardrobe
-start-lan.cmd
-```
+需要当前趋势时，可以请求分析可访问的小红书等公开参考，或提供链接、截图；访问受限时不会绕过限制或编造趋势来源。
 
-然后用运行电脑的局域网 IPv4 地址访问，例如 `http://192.168.5.32:4173/`。服务运行在哪台电脑，数据就保存在哪台电脑。
+## 数据与能力边界
 
-## 个人数据
+每位使用者的照片、数据库和清单保存在自己的 `wardrobe/data/`，不会随公开仓库分发，也不应提交到 GitHub。新安装从空衣橱开始。
 
-个人数据在 `wardrobe/data/`：原图、缩略图、SQLite 数据库和 `wardrobe.json` 都在这里。这个目录默认不应提交到公共 GitHub。迁移或备份时复制整个目录即可。
+录入工具负责单品、照片、分类、排序和回收站；Skill 负责搭配、风格校准、趋势适配与购物研究。参考图里的衣物不会被当成已有单品，Skill 不自动下单。
 
-## 迁移到另一台电脑
+默认服务仅限本机访问。同一可信网络内上传图片的方式与访问边界见 [衣橱工具说明](wardrobe/README.md)。
 
-如果需要把当前已经录入的衣橱带到另一台电脑，请先停止服务，再运行：
+## 其他 Skill
 
-```powershell
-.\scripts\package-personal-bundle.cmd
-```
+只需要流程图或多专家分析时，可以分别安装 `skills/flowmaker/` 或 `skills/prism/`，无需启动衣橱工具。
 
-脚本会生成包含 `wardrobe/data/` 和 `context/` 的个人迁移包，默认输出到 `dist/`。这个压缩包包含个人照片和数据库，不应上传到公开 GitHub。
-
-在另一台电脑的项目根目录运行：
-
-```powershell
-.\scripts\restore-personal-bundle.cmd -ArchivePath .\my-wardrobe-private-YYYY-MM-DD.zip
-```
-
-完整流程见 [MIGRATION.md](MIGRATION.md)，备份注意事项见 [BACKUP.md](BACKUP.md)。
-
-Skill 优先读取正在运行的本地服务；也可以通过 `WARDROBE_URL` 指定服务地址，服务不可用时回退读取项目中的 `wardrobe/data/wardrobe.json`。
-
-## 当前能力边界
-
-录入工具负责真实衣物、照片标签、分类、排序、回收站和清单导出。Skill 负责审美校准、基于真实衣橱的穿搭、天气与场景适配、风格参考研究、衣橱缺口和购物候选。它不会自动下单，也不会把参考图片中的模特衣物当成用户已有衣物。
+- flowmaker：生成的 HTML 运行时需要访问 CDN。
+- Prism：需自行配置可信 Provider 和 API key，配置步骤见 [INSTALL.md](skills/prism/INSTALL.md)。
